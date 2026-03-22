@@ -1,0 +1,25 @@
+# Python junk
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local venvs
+.venv/
+.env
+.env.example
+.python-version
+
+# Git
+.git
+.gitignore
+
+# OS junk
+Thumbs.db
+*.lnk
+.DS_Store
+
+# Docs / dev-only files
+doc/
+flow.html
+README.md

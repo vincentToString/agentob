@@ -1,0 +1,15 @@
+[project]
+name = "ai-service"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aio-pika>=9.5.7",
+    "httpx>=0.28.1",
+    "orjson>=3.11.3",
+    "pydantic>=2.11.9",
+    "python-dotenv>=1.1.1",
+    "redis>=7.0.0",
+    "boto3>=1.35.0",
+]

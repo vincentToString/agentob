@@ -1,0 +1,13 @@
+[project]
+name = "outbound"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aio-pika>=9.5.7",
+    "aiohttp>=3.12.15",
+    "dotenv>=0.9.9",
+    "pyjwt[crypto]>=2.10.1",
+    "redis>=5.0.0",
+]

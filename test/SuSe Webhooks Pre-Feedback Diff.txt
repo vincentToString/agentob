@@ -1,0 +1,184 @@
+diff --git a/external/subscriptions.yml b/external/subscriptions.yml
+index 961b062226..5417bb286c 100644
+--- a/external/subscriptions.yml
++++ b/external/subscriptions.yml
+@@ -8,8 +8,8 @@ info:
+     With this API, you can create, update, delete, and view subscriptions.
+     This API can be used to integrate subscription management functionality into your applications.
+ 
+-    Bandwidth currently offers email notifications for events that a customer has subscribed to.
+-    These emails can be triggered for events instantly or as a daily roll up of event history.
++    Bandwidth currently offers email and webhook notifications for events that a customer has subscribed to.
++    These notifications can be triggered for events instantly, and emails can also be sent as a daily roll-up of event history.
+     
+     In order to receive notifications, you must first create a subscription.
+ 
+@@ -383,26 +383,9 @@ components:
+         subscriptionDefinitionName:
+           type: string
+           description: The name for the subscription definition
+-          example: "SUBSCRIPTION_DEFINITION_EXAMPLE"
++          example: "Package_Update"
+         deliveryType:
+           $ref: '#/components/schemas/deliveryTypesEnum'
+-        emailSubscription:
+-          type: object
+-          required:
+-            - emailAddress
+-          properties:
+-            emailAddress:
+-              $ref: '#/components/schemas/email'
+-            digest:
+-              type: string
+-              description: The digest frequency for the subscription
+-              default: "INSTANT"
+-              enum:
+-                - DAILY
+-                - INSTANT
+-              example: "DAILY"
+-        webhookSubscription:
+-          $ref: '#/components/schemas/webhookSubscription'
+         createdBy:
+           type: string
+           description: The user who created the subscription
+@@ -428,6 +411,27 @@ components:
+             - field: "status"
+               operator: "IN"
+               value: [ "APPROVED", "PENDING" ]
++      oneOf:
++        - title: Email Subscription
++          required:
++          - emailSubscription
++          properties:
++            emailSubscription:
++              $ref: '#/components/schemas/emailSubscription'
++        - title: Webhook Subscription
++          required:
++          - webhookSubscription
++          properties:
++            webhookSubscription:
++              $ref: '#/components/schemas/webhookSubscription'
++    digest:
++      type: string
++      description: The digest frequency for the subscription
++      default: "INSTANT"
++      enum:
++        - DAILY
++        - INSTANT
++      example: "DAILY"
+     filterCriteria:
+       type: object
+       description: Filter Criteria
+@@ -485,7 +489,7 @@ components:
+     subscriptionDefinitionList:
+       type: array
+       items:
+-        $ref: '#/components/schemas/subscriptionDefinition'
++        $ref: '#/components/schemas/subscriptionDefinitionBase'
+     subscriptionDefinitionResponse:
+       type: object
+       properties:
+@@ -494,16 +498,15 @@ components:
+           items:
+             $ref: '#/components/schemas/link'
+         data:
+-          $ref: '#/components/schemas/subscriptionDefinition'
++          $ref: '#/components/schemas/subscriptionDefinitionBase'
+         errors:
+           type: array
+           items:
+             $ref: '#/components/schemas/error'
+-    subscriptionDefinition:
++    subscriptionDefinitionBase:
+       type: object
+       required:
+         - name
+-        - eventType
+         - supportedDeliveryTypes
+         - functionalDomain
+       properties:
+@@ -511,10 +514,6 @@ components:
+           type: string
+           example: Package_Update
+           description: The name which uniquely identifies the subscription definition
+-        eventType:
+-          type: string
+-          example: PACKAGE_REQUIREMENT_STATUS_UPDATE
+-          description: Defines what event this subscription notification is reactive to. This name MUST match the `event_type` in the published event message.
+         description:
+           type: string
+           example: Notifications for purchase events
+@@ -534,23 +533,24 @@ components:
+             $ref: '#/components/schemas/deliveryTypesEnum'
+         functionalDomain:
+           type: string
+-        webhookConfiguration:
+-          $ref: '#/components/schemas/webhookConfiguration'
+-    webhookConfiguration:
++    webhookAuthentication:
+       type: object
+-      description: Configuration for the webhook delivery mechanism
++      description: Credentials for webhook authentication
+       properties:
+-        webhookPayloadTemplate:
+-          type: string
+-          description: The template for the payload to send in the webhook
+-          example: "{ \"account_id\": {accountId}, \"status\": {status}}"
+-        webhookHeaders:
++        basicAuthentication:
+           type: object
+-          description: Key/Value pairs for optional headers to send with the webhook.
+-          example:
+-            content-type: application/json
++          properties:
++            username:
++              type: string
++              description: The username for basic authentication
++              example: "apiUser"
++            password:
++              type: string
++              description: The password for basic authentication
++              example: "s3cureP@ssw0rd!"
+     webhookSubscription:
+       type: object
++      description: webhook subscription
+       required:
+         - url
+       properties:
+@@ -558,6 +558,18 @@ components:
+           type: string
+           format: uri
+           description: The URL to send the webhook to
++          example: "https://example.com/webhook"
++        authentication:
++          $ref: '#/components/schemas/webhookAuthentication'
++    emailSubscription:
++      type: object
++      required:
++        - emailAddress
++      properties:
++        emailAddress:
++          $ref: '#/components/schemas/email'
++        digest:
++          $ref: '#/components/schemas/digest'
+     email:
+       type: string
+       format: email
+@@ -833,7 +845,7 @@ components:
+             description: Unexpected internal server error. Contact Bandwidth Customer Support if this problem persists.
+             code: 32030
+     createSubscriptionEmailExample:
+-      description: example subscription creation
++      description: example subscription creation for email notifications
+       value:
+         accountId: "10000001"
+         customName: "My Subscription"
+@@ -847,7 +859,7 @@ components:
+             operator: "EQ"
+             value: "APPROVED"
+     createSubscriptionWebhookExample:
+-      description: example subscription creation for webhook
++      description: example subscription creation for webhook notifications
+       value:
+         accountId: "10000001"
+         customName: "My Webhook Subscription"

@@ -1,0 +1,194 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: prowl_user
+      POSTGRES_PASSWORD: prowl_password
+      POSTGRES_DB: prowl_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prowl_user -d prowl_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672" # port
+      - "15672:15672" # management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
+    volumes:
+      - "rabbitmq_data:/var/lib/rabbitmq"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  intake:
+    build:
+      context: ./intake
+      dockerfile: Dockerfile
+    ports:
+      - "8000"
+    environment:
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - GITHUB_APP_ID=${GITHUB_APP_ID}
+      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID}
+      - GITHUB_PRIVATE_KEY_PATH=/app/github-app-private-key.pem
+      - SLACK_TOKEN=${SLACK_TOKEN}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./intake:/app/intake
+      - ./github-app-private-key.pem:/app/github-app-private-key.pem:ro
+
+  ai_service:
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    container_name: ai_service
+    environment:
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=prowl_user
+      - POSTGRES_PASSWORD=prowl_password
+      - POSTGRES_DB=prowl_db
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_BASE=${OPENROUTER_BASE:-https://openrouter.ai/api/v1}
+      - MODEL=${MODEL:-deepseek/deepseek-chat-v3.1:free}
+      - LLM_TIMEOUT=${LLM_TIMEOUT:-20}
+      - MAX_FILES_FOR_SNIPPETS=${MAX_FILES_FOR_SNIPPETS:-3}
+      - MAX_LINES_PER_FILE=${MAX_LINES_PER_FILE:-120}
+      - REDIS_URL=redis://redis:6379
+      - AWS_REGION=${AWS_REGION}
+      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - RAG_SERVICE_URL=http://rag_service:8002
+      - RAG_ENABLED=${RAG_ENABLED:-true}
+      - RAG_TOP_K=${RAG_TOP_K:-3}
+      - RAG_TIMEOUT=${RAG_TIMEOUT:-5}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rag_service:
+        condition: service_started
+    restart: unless-stopped
+    volumes:
+      - ./ai_service:/app/ai_service
+
+  outbound:
+    build:
+      context: ./outbound
+      dockerfile: Dockerfile
+    container_name: outbound
+    environment:
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
+      - GITHUB_APP_ID=${GITHUB_APP_ID}
+      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID}
+      - GITHUB_PRIVATE_KEY_PATH=/app/github-app-private-key.pem
+      - SLACK_TOKEN=${SLACK_TOKEN}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./outbound:/app/outbound
+      - ./github-app-private-key.pem:/app/github-app-private-key.pem:ro
+
+  rag_service:
+    build:
+      context: ./rag_service
+      dockerfile: Dockerfile
+    container_name: rag_service
+    ports:
+      - "8002:8002"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=prowl_user
+      - POSTGRES_PASSWORD=prowl_password
+      - POSTGRES_DB=prowl_db
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_BASE=${OPENROUTER_BASE:-https://openrouter.ai/api/v1}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+      - SERVICE_HOST=0.0.0.0
+      - SERVICE_PORT=8002
+      - KG_CHUNK_SIZE=${KG_CHUNK_SIZE:-512}
+      - KG_CHUNK_OVERLAP=${KG_CHUNK_OVERLAP:-50}
+      - KG_MAX_ENTITIES_PER_CHUNK=${KG_MAX_ENTITIES_PER_CHUNK:-10}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./rag_service:/app/rag_service
+
+  dashboard:
+    build:
+      context: ./dash/api
+      dockerfile: Dockerfile
+    container_name: dashboard
+    ports:
+      - "8003:8003"
+    environment:
+      - SERVICE_HOST=0.0.0.0
+      - SERVICE_PORT=8003
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=prowl_user
+      - POSTGRES_PASSWORD=prowl_password
+      - POSTGRES_DB=prowl_db
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
+      - RABBITMQ_MANAGEMENT_URL=http://rabbitmq:15672
+      - REDIS_URL=redis://redis:6379
+      - METRICS_REFRESH_INTERVAL=5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./dash/api:/app
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:

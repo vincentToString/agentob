@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdm
+*.egg-info/
+.venv/
+
+# Environment
+.env
+.env.*
+!.env.example
+.python-version
+
+# Docker
+docker-data/
+*.pid
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Project-specific
+flow.html
+doc/
+
+# Github App private key
+*.pem
+github-app-private-key.pem
