@@ -1,67 +1,55 @@
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from aio_pika import connect_robust, Message, DeliveryMode, ExchangeType
 from pydantic import BaseModel
-from typing import Optional
 import logging
 from dotenv import load_dotenv
 import os
-from fastapi import FastAPI
-from contextlib import asynccontextmanager
 from aio_pika import connect_robust, ExchangeType
-import logging
 from intake.config import Config
-from intake.webhooks import router as webhook_router
 from .heartbeat import HeartbeatEmitter
 from .redis_client import RedisClient
+from .trace_collector import router as trace_router
 
-
-
-
-load_dotenv()
-
-class PullRequestModel(BaseModel):
-    action: str
-    number: int
-    pull_request: dict
-    repository: dict
 
 logging.basicConfig(
-      level=logging.INFO,
-      format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'     
-  )
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
+redis_client = RedisClient(Config.REDIS_URL)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Connection to RabbitMQ")
+    """Startup and shutdown logic"""
+    # Startup
+    logger.info("Starting intake service...")
     app.state.rabbitmq_connection = await connect_robust(Config.RABBITMQ_URL)
 
     setup_channel = await app.state.rabbitmq_connection.channel()
 
     try:
-        # AI service Exchanges
-        ai_exchange = await setup_channel.declare_exchange(
-            "ai_service", ExchangeType.DIRECT, durable=True
+        # Declare analyzer exchange and queue
+        analyzer_exchange = await setup_channel.declare_exchange(
+            "analyzer_exchange", ExchangeType.DIRECT, durable=True
         )
-        ai_queue = await setup_channel.declare_queue("pr_review", durable=True)
-        await ai_queue.bind(ai_exchange, routing_key="pr")
-
-        # Oursource exchanges
-        out_exchange = await setup_channel.declare_exchange(
-            "out_exchange", ExchangeType.FANOUT, durable=True
+        trace_queue = await setup_channel.declare_queue(
+            "trace_events", durable=True
         )
+        await trace_queue.bind(analyzer_exchange, routing_key="trace")
 
-        # maintain this slack queue seperately so we can pause notification during off office time
-        slack_queue = await setup_channel.declare_queue("slack_msgs", durable=True)
-        await slack_queue.bind(out_exchange)
-
-        github_queue = await setup_channel.declare_queue("github_comments", durable=True)
-        await github_queue.bind(out_exchange)
+        # Declare alert exchange and queues
+        alert_exchange = await setup_channel.declare_exchange(
+            "alert_exchange",
+            ExchangeType.FANOUT,
+            durable=True
+        )
+    
+        await setup_channel.declare_queue("alerts", durable=True)
+        await setup_channel.declare_queue("slack_msgs", durable=True)
     finally: 
         await setup_channel.close()
     
-    redis_client = RedisClient(Config.REDIS_URL)
     app.state.heartbeat = HeartbeatEmitter(
         redis_client,
         service_name="intake",
@@ -90,14 +78,10 @@ async def lifespan(app: FastAPI):
     await app.state.rabbitmq_connection.close()
     
 
-app = FastAPI(lifespan=lifespan)
-
-@app.get("/")
-def ping():
-    return {"message": "hello world"}
+app = FastAPI(title="AgentOB trace Collector", lifespan=lifespan)
 
 @app.get("/health")
-def health():
-    return {"status": "healthy"}
+async def health():
+    return {"status": "healthy", "service": "trace_collector"}
 
-app.include_router(webhook_router)
+app.include_router(trace_router)

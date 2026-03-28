@@ -23,15 +23,15 @@ class RedisClient:
             log.info(f"Redis client connected to {self.url}")
         return self._client
     
-    async def store_diff(self, diff_id: str, diff_content: str, ttl: int = 3600) -> bool:
-        """Store diff content with TTL(default 1 hour)"""
+    async def store_trace(self, trace_id: str, trace_content: str, ttl: int = 3600) -> bool:
+        """Store trace content with TTL(default 1 hour)"""
         try:
             client = await self.get_client()
-            await client.setex(f"diff:{diff_id}", ttl, diff_content)
-            log.info(f"Stored diff {diff_id}")
+            await client.setex(f"trace:{trace_id}", ttl, trace_content)
+            log.info(f"Stored trace {trace_id}")
             return True
         except Exception as e:
-            log.error(f"Failed to store diff {diff_id}: {e}")
+            log.error(f"Failed to store trace {trace_id}: {e}")
             return False
     
     async def store_rate(self, cache_key: str, scores: Dict[str, float], ttl: int = 6 * 60 * 60) -> bool:
