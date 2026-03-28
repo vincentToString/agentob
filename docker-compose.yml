@@ -72,9 +72,10 @@ services:
     build:
       context: ./ai_service
       dockerfile: Dockerfile
-    container_name: ai_service
+    container_name: analyzer
     environment:
       - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
+      - REDIS_URL=redis://redis:6379
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_USER=prowl_user
@@ -82,15 +83,8 @@ services:
       - POSTGRES_DB=prowl_db
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENROUTER_BASE=${OPENROUTER_BASE:-https://openrouter.ai/api/v1}
-      - MODEL=${MODEL:-deepseek/deepseek-chat-v3.1:free}
+      - MODEL=${MODEL:-openai/gpt-4o-mini}
       - LLM_TIMEOUT=${LLM_TIMEOUT:-20}
-      - MAX_FILES_FOR_SNIPPETS=${MAX_FILES_FOR_SNIPPETS:-3}
-      - MAX_LINES_PER_FILE=${MAX_LINES_PER_FILE:-120}
-      - REDIS_URL=redis://redis:6379
-      - AWS_REGION=${AWS_REGION}
-      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - RAG_SERVICE_URL=http://rag_service:8002
       - RAG_ENABLED=${RAG_ENABLED:-true}
       - RAG_TOP_K=${RAG_TOP_K:-3}
@@ -100,8 +94,8 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-      rag_service:
-        condition: service_started
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     volumes:
       - ./ai_service:/app/ai_service
