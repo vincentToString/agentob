@@ -1,10 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import logging
+from typing import Optional, List, Dict, Any
+from datetime import datetime
 
-from models import DashboardOverview
+from models import DashboardOverview, TraceListItem, TraceDetail, AlertItem
 from metrics_collector import MetricsCollector
 from config import config
 
@@ -69,21 +71,46 @@ async def get_overview():
     # Collect all metrics in parallel
     services = await metrics_collector.get_service_instances()
     queues = await metrics_collector.get_queue_stats()
-    recent_reviews = await metrics_collector.get_recent_reviews(limit=20)
-    token_estimates = await metrics_collector.get_token_estimates()
-    latency_metrics = await metrics_collector.get_latency_metrics()
-    aggregate_stats = await metrics_collector.get_aggregate_stats()
+    recent_traces = await metrics_collector.get_recent_traces(limit=10)
+    recent_alerts = await metrics_collector.get_recent_alerts(limit=10)
 
+    # Aggregate stats
+    stats = await metrics_collector.get_aggregate_stats()
+    
     return DashboardOverview(
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(),
         services=services,
         queues=queues,
-        recent_reviews=recent_reviews,
-        token_estimates=token_estimates,
-        latency_metrics=latency_metrics,
-        **aggregate_stats
+        recent_traces=recent_traces,
+        recent_alerts=recent_alerts,
+        token_estimates=[],  # Keep empty for now
+        latency_metrics=[],  # Keep empty for now
+        total_reviews_today=stats.get("total_today", 0),
+        total_reviews_week=stats.get("total_week", 0),
+        success_rate_24h=stats.get("success_rate", 0.0),
+        avg_processing_time_24h=stats.get("avg_time", 0.0),
+        total_cost_today=stats.get("total_cost", 0.0),
     )
 
+@app.get("/api/traces", response_model=List[TraceListItem])
+async def get_traces(limit: int = 20, project_id: Optional[str] = None):
+    """Get recent traces"""
+    return await metrics_collector.get_recent_traces(limit=limit, project_id=project_id)
+
+
+@app.get("/api/traces/{run_id}", response_model=TraceDetail)
+async def get_trace_detail(run_id: str):
+    """Get detailed trace data"""
+    trace = await metrics_collector.get_trace_detail(run_id)
+    if not trace:
+        raise HTTPException(status_code=404, detail="Trace not found")
+    return trace
+
+
+@app.get("/api/alerts", response_model=List[AlertItem])
+async def get_alerts(limit: int = 50, severity: Optional[str] = None):
+    """Get recent alerts"""
+    return await metrics_collector.get_recent_alerts(limit=limit, severity=severity)
 
 @app.get("/api/services")
 async def get_services():

@@ -52,6 +52,7 @@ services:
     build:
       context: ./intake
       dockerfile: Dockerfile
+    container_name: intake
     ports:
       - "8000:8000"
     environment:
@@ -59,7 +60,7 @@ services:
       - SERVICE_PORT=8000
       - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
       - REDIS_URL=redis://redis:6379
-      - TRACE_TTL=3600
+      - DIFF_TTL=3600
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -68,19 +69,20 @@ services:
     restart: unless-stopped
     volumes:
       - ./intake:/app/intake
+
   ai_service:
     build:
       context: ./ai_service
       dockerfile: Dockerfile
-    container_name: analyzer
+    container_name: ai_service
     environment:
       - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
       - REDIS_URL=redis://redis:6379
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=prowl_user
-      - POSTGRES_PASSWORD=prowl_password
-      - POSTGRES_DB=prowl_db
+      - POSTGRES_USER=agentob_user
+      - POSTGRES_PASSWORD=agentob_password
+      - POSTGRES_DB=agentob_db
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENROUTER_BASE=${OPENROUTER_BASE:-https://openrouter.ai/api/v1}
       - MODEL=${MODEL:-openai/gpt-4o-mini}
@@ -130,9 +132,9 @@ services:
     environment:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=prowl_user
-      - POSTGRES_PASSWORD=prowl_password
-      - POSTGRES_DB=prowl_db
+      - POSTGRES_USER=agentob_user
+      - POSTGRES_PASSWORD=agentob_password
+      - POSTGRES_DB=agentob_db
       - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENROUTER_BASE=${OPENROUTER_BASE:-https://openrouter.ai/api/v1}
@@ -163,11 +165,11 @@ services:
       - SERVICE_PORT=8003
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=prowl_user
-      - POSTGRES_PASSWORD=prowl_password
-      - POSTGRES_DB=prowl_db
+      - POSTGRES_USER=agentob_user
+      - POSTGRES_PASSWORD=agentob_password
+      - POSTGRES_DB=agentob_db
       - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
-      - RABBITMQ_MANAGEMENT_URL=http://rabbitmq:15672
+      - RABBITMQ_MANAGEMENT_URL=http://admin:password@rabbitmq:15672
       - REDIS_URL=redis://redis:6379
       - METRICS_REFRESH_INTERVAL=5
     depends_on:

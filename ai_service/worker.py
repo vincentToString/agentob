@@ -59,10 +59,10 @@ async def process_trace(trace_data: dict) -> AnalysisResult:
     
     # --- 1. COST ATTRIBUTION ---
     total_cost = estimate_span_costs(spans)
-    
-    total_tokens_in = sum(s.get("tokens_input", 0) for s in spans)
-    total_tokens_out = sum(s.get("tokens_output", 0) for s in spans)
-    total_duration = max((s.get("duration_ms", 0) for s in spans), default=0)
+
+    total_tokens_in = sum(s.get("tokens_input") or 0 for s in spans)
+    total_tokens_out = sum(s.get("tokens_output") or 0 for s in spans)
+    total_duration = max((s.get("duration_ms") or 0 for s in spans), default=0)
     
     # --- 2. BUILD SPAN TREE ---
     span_tree, depth_map = build_span_tree(spans)
@@ -179,7 +179,7 @@ async def handle_message(message: AbstractIncomingMessage, channel):
             return
 
         # Fetch trace from Redis
-        trace_data = await redis_client.get_diff(trace_id)
+        trace_data = await redis_client.get_trace(trace_id)
         if not trace_data:
             logger.error(f"Trace {trace_id} not found in Redis")
             return
@@ -268,31 +268,31 @@ async def fetch_rag_context(
         return []
 
 
-def load_prompt_template(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        raise SystemExit(f"Prompt file not found: {path.resolve()}")
+# def load_prompt_template(path: Path) -> str:
+#     try:
+#         return path.read_text(encoding="utf-8")
+#     except FileNotFoundError:
+#         raise SystemExit(f"Prompt file not found: {path.resolve()}")
 
 
-def render_prompt(
-    prompt_template: str,
-    event: PullRequestData,
-    files: list[dict],
-    snippets: list[dict],
-    rag_context: list[dict] = None,
-) -> str:
-    rag_context = rag_context or []
-    return (
-        prompt_template.replace("{{repo_name}}", event.repo_name)
-        .replace("{{pr_number}}", str(event.pr_number))
-        .replace("{{pr_title}}", event.pr_title)
-        .replace("{{pr_author}}", event.pr_author)
-        .replace("{{pr_body}}", (event.pr_body or "")[:1000])
-        .replace("{{files_table}}", build_files_table(files))
-        .replace("{{snippets}}", build_snippets_block(snippets))
-        .replace("{{rag_context}}", build_rag_context_block(rag_context))
-    )
+# def render_prompt(
+#     prompt_template: str,
+#     event: PullRequestData,
+#     files: list[dict],
+#     snippets: list[dict],
+#     rag_context: list[dict] = None,
+# ) -> str:
+#     rag_context = rag_context or []
+#     return (
+#         prompt_template.replace("{{repo_name}}", event.repo_name)
+#         .replace("{{pr_number}}", str(event.pr_number))
+#         .replace("{{pr_title}}", event.pr_title)
+#         .replace("{{pr_author}}", event.pr_author)
+#         .replace("{{pr_body}}", (event.pr_body or "")[:1000])
+#         .replace("{{files_table}}", build_files_table(files))
+#         .replace("{{snippets}}", build_snippets_block(snippets))
+#         .replace("{{rag_context}}", build_rag_context_block(rag_context))
+#     )
 
 
 
@@ -395,11 +395,11 @@ async def main():
         heartbeat_loop(
             redis=redis_client,
             state=state,
-            service_name="analyzer",
+            service_name="ai_service",
             instance_id=instance_id,
             interval_s=10,
         ),
-        name=f"heartbeat:analyzer:{instance_id}",
+        name=f"heartbeat:ai_service:{instance_id}",
     )
 
     # Connect to RabbitMQ

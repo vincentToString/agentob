@@ -60,11 +60,73 @@ class LatencyMetrics(BaseModel):
     sample_size: int
 
 
+class TraceListItem(BaseModel):
+    """Summary of a trace for list view"""
+    run_id: str
+    agent_name: str
+    agent_framework: Optional[str] = None
+    status: str
+    total_spans: int
+    total_cost_usd: float
+    duration_ms: Optional[int] = None
+    anomaly_count: int = 0
+    baseline_deviation_score: float = 0.0
+    llm_summary: Optional[str] = None
+    started_at: datetime
+
+
+class SpanTreeNode(BaseModel):
+    """Recursive span tree node"""
+    span_id: str
+    parent_span_id: Optional[str] = None
+    span_type: str
+    name: str
+    duration_ms: Optional[int] = None
+    cost_usd: Optional[float] = None
+    tokens_input: Optional[int] = None
+    tokens_output: Optional[int] = None
+    tool_name: Optional[str] = None
+    tool_status: Optional[str] = None
+    is_anomalous: bool = False
+    anomaly_type: Optional[str] = None
+    depth: int = 0
+    children: List[dict] = []  # Recursive - will be SpanTreeNode
+
+
+class TraceDetail(BaseModel):
+    """Full trace details"""
+    run_id: str
+    agent_name: str
+    status: str
+    total_spans: int
+    total_cost_usd: float
+    total_tokens_input: int
+    total_tokens_output: int
+    duration_ms: Optional[int] = None
+    anomaly_count: int = 0
+    baseline_deviation_score: float = 0.0
+    llm_summary: Optional[str] = None
+    span_tree: List[dict] = []  # Pre-computed tree from worker
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+
+
+class AlertItem(BaseModel):
+    """Alert/anomaly detected"""
+    alert_id: str
+    run_id: Optional[str]
+    alert_type: str
+    severity: str
+    title: str
+    description: Optional[str]
+    created_at: datetime
+    
 class DashboardOverview(BaseModel):
     timestamp: datetime
     services: List[ServiceInstance]
     queues: List[QueueStats]
-    recent_reviews: List[ReviewHistoryItem]
+    recent_traces: List[TraceListItem]
+    recent_alerts: List[AlertItem]
     token_estimates: List[TokenEstimate]
     latency_metrics: List[LatencyMetrics]
 
@@ -74,3 +136,4 @@ class DashboardOverview(BaseModel):
     success_rate_24h: float
     avg_processing_time_24h: float
     total_cost_today: float
+

@@ -4,7 +4,7 @@ from typing import Optional
 class SpanEvent(BaseModel):
     """A single step in agent execution"""
     span_id: str
-    run_id: str
+    run_id: Optional[str] = None  # Populated from parent trace
     parent_span_id: Optional[str] = None
     span_type: str  # 'llm_call', 'tool_use', 'decision', 'retrieval', 'error', 'custom'
     name: str

@@ -1,6 +1,6 @@
 import axios from "axios";
-import type { DashboardOverview } from "../types";
-//import.meta.env.VITE_API_BASE ||
+import type { DashboardOverview, TraceListItem, TraceDetail, AlertItem } from "../types";
+
 const API_BASE = "/api";
 
 const client = axios.create({
@@ -15,7 +15,27 @@ export const api = {
     return data;
   },
 
-  // Individual endpoints
+  // Trace endpoints
+  getTraces: async (limit = 20, project_id?: string): Promise<TraceListItem[]> => {
+    const { data } = await client.get<TraceListItem[]>("/traces", {
+      params: { limit, project_id },
+    });
+    return data;
+  },
+
+  getTraceDetail: async (runId: string): Promise<TraceDetail> => {
+    const { data } = await client.get<TraceDetail>(`/traces/${runId}`);
+    return data;
+  },
+
+  getAlerts: async (limit = 50, severity?: string): Promise<AlertItem[]> => {
+    const { data } = await client.get<AlertItem[]>("/alerts", {
+      params: { limit, severity },
+    });
+    return data;
+  },
+
+  // Infrastructure endpoints
   getServices: async () => {
     const { data } = await client.get("/services");
     return data;
@@ -26,11 +46,6 @@ export const api = {
     return data;
   },
 
-  getRecentReviews: async (limit = 50) => {
-    const { data } = await client.get("/reviews/recent", { params: { limit } });
-    return data;
-  },
-
   getTokenEstimates: async () => {
     const { data } = await client.get("/tokens/estimates");
     return data;
@@ -38,28 +53,6 @@ export const api = {
 
   getLatencyMetrics: async () => {
     const { data } = await client.get("/latency");
-    return data;
-  },
-
-  // Chart data
-  getReviewsOverTime: async (hours = 24) => {
-    const { data } = await client.get("/charts/reviews-over-time", {
-      params: { hours },
-    });
-    return data;
-  },
-
-  getLatencyOverTime: async (hours = 24) => {
-    const { data } = await client.get("/charts/latency-over-time", {
-      params: { hours },
-    });
-    return data;
-  },
-
-  getCostOverTime: async (days = 7) => {
-    const { data } = await client.get("/charts/cost-over-time", {
-      params: { days },
-    });
     return data;
   },
 };

@@ -33,18 +33,18 @@ class RedisClient:
     #         log.error(f"Failed to store diff {diff_id}: {e}")
     #         return False
     
-    async def get_diff(self, diff_id: str) -> Optional[Dict]:
-        """Retrieve diff content"""
+    async def get_trace(self, trace_id: str) -> Optional[Dict]:
+        """Retrieve trace content"""
         try:
             client = await self.get_client()
-            diff_content = await client.get(f"diff:{diff_id}")
-            if diff_content:
-                log.info(f"Retrieved diff {diff_id}")
+            trace_content = await client.get(f"trace:{trace_id}")
+            if trace_content:
+                log.info(f"Retrieved trace {trace_id}")
             else:
-                log.warning(f"Diff {diff_id} not found or expired")
-            return json.loads(diff_content)
+                log.warning(f"Trace {trace_id} not found or expired")
+            return json.loads(trace_content)
         except Exception as e:
-            log.error(f"Failed to retrieve diff {diff_id}: {e}")
+            log.error(f"Failed to retrieve trace {trace_id}: {e}")
             return None
     
     async def delete_diff(self, diff_id: str) -> bool:

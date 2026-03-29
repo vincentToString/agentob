@@ -3,8 +3,25 @@ import os
 import json
 import logging
 from typing import Optional
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+
+def parse_timestamp(ts_str: Optional[str]) -> Optional[datetime]:
+    """Parse ISO timestamp string to timezone-naive datetime for PostgreSQL"""
+    if not ts_str:
+        return None
+    try:
+        # Parse and remove timezone info (PostgreSQL TIMESTAMP doesn't store timezone)
+        if ts_str.endswith('Z'):
+            ts_str = ts_str[:-1] + '+00:00'
+        dt = datetime.fromisoformat(ts_str)
+        # Remove timezone info to make it naive
+        return dt.replace(tzinfo=None)
+    except Exception as e:
+        logger.warning(f"Failed to parse timestamp '{ts_str}': {e}")
+        return None
 
 _db_pool = None
 
@@ -193,8 +210,8 @@ async def store_trace_to_db(
                 llm_summary,
                 json.dumps(span_tree),
                 baseline_deviation_score,
-                trace_data.get("started_at"),
-                trace_data.get("completed_at"),
+                parse_timestamp(trace_data.get("started_at")),
+                parse_timestamp(trace_data.get("completed_at")),
                 json.dumps(trace_data.get("metadata", {})),
                 trace_data.get("tags", []),
             )
@@ -228,8 +245,8 @@ async def store_trace_to_db(
                     span.get("cost_usd"),
                     span.get("tool_name"),
                     span.get("tool_status"),
-                    span.get("started_at"),
-                    span.get("completed_at"),
+                    parse_timestamp(span.get("started_at")),
+                    parse_timestamp(span.get("completed_at")),
                     span.get("duration_ms"),
                     span.get("sequence_index", 0),
                     depth_map.get(span["span_id"], 0),

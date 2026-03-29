@@ -18,10 +18,6 @@ RUN uv sync --frozen
 COPY . ./intake/ 
 # ---------------------
 
-# Copy entrypoint explicitly (if it's in the root of your context)
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
 
 EXPOSE 8000
 

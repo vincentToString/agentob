@@ -12,9 +12,9 @@ class Config:
     # Database (for review history)
     POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
     POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
-    POSTGRES_USER = os.getenv("POSTGRES_USER", "prowl_user")
-    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "prowl_password")
-    POSTGRES_DB = os.getenv("POSTGRES_DB", "prowl_db")
+    POSTGRES_USER = os.getenv("POSTGRES_USER", "agentob_user")
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "agentob_password")
+    POSTGRES_DB = os.getenv("POSTGRES_DB", "agentob_db")
 
     @property
     def database_url(self) -> str:

@@ -19,6 +19,11 @@ async def ingest_trace(request: Request, trace: AgentTrace):
     """
     trace_id = trace.run_id or str(uuid.uuid4())
 
+    # Populate run_id for each span
+    for span in trace.spans:
+        if not span.run_id:
+            span.run_id = trace_id
+
     # Store full trace in Redis for worker to fetch (same pattern as PR diff storage)
     trace_data = trace.model_dump()
     trace_data["trace_id"] = trace_id
