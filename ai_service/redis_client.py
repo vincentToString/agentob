@@ -22,17 +22,6 @@ class RedisClient:
             log.info(f"Redis client connected to {self.url}")
         return self._client
     
-    # async def store_diff(self, diff_id: str, diff_content: str, ttl: int = 3600) -> bool:
-    #     """Store diff content with TTL (default 1 hour)"""
-    #     try:
-    #         client = await self.get_client()
-    #         await client.setex(f"diff:{diff_id}", ttl, diff_content)
-    #         log.info(f"Stored diff {diff_id} with TTL {ttl}s")
-    #         return True
-    #     except Exception as e:
-    #         log.error(f"Failed to store diff {diff_id}: {e}")
-    #         return False
-    
     async def get_trace(self, trace_id: str) -> Optional[Dict]:
         """Retrieve trace content"""
         try:
@@ -46,17 +35,6 @@ class RedisClient:
         except Exception as e:
             log.error(f"Failed to retrieve trace {trace_id}: {e}")
             return None
-    
-    async def delete_diff(self, diff_id: str) -> bool:
-        """Delete diff content"""
-        try:
-            client = await self.get_client()
-            await client.delete(f"diff:{diff_id}")
-            log.info(f"Deleted diff {diff_id}")
-            return True
-        except Exception as e:
-            log.error(f"Failed to delete diff {diff_id}: {e}")
-            return False
     
     async def register_instance(self, service_name: str, instance_id: str) -> bool:
         """Register service instance in Redis set"""

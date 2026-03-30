@@ -1,6 +1,5 @@
 import os
 from dotenv import load_dotenv
-from .auth import GitHubAppAuth
 
 load_dotenv()
 

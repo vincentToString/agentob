@@ -109,9 +109,6 @@ services:
     container_name: outbound
     environment:
       - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
-      - GITHUB_APP_ID=${GITHUB_APP_ID}
-      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID}
-      - GITHUB_PRIVATE_KEY_PATH=/app/github-app-private-key.pem
       - SLACK_TOKEN=${SLACK_TOKEN}
       - REDIS_URL=redis://redis:6379
     depends_on:
@@ -120,7 +117,6 @@ services:
     restart: unless-stopped
     volumes:
       - ./outbound:/app/outbound
-      - ./github-app-private-key.pem:/app/github-app-private-key.pem:ro
 
   rag_service:
     build:
