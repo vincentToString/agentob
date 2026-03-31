@@ -8,7 +8,7 @@ from aio_pika import connect_robust, ExchangeType
 from intake.config import Config
 from .heartbeat import HeartbeatEmitter
 from .redis_client import RedisClient
-from .trace_collector import router as trace_router
+from .span_collector import router as trace_router
 
 
 logging.basicConfig(
@@ -29,24 +29,47 @@ async def lifespan(app: FastAPI):
     setup_channel = await app.state.rabbitmq_connection.channel()
 
     try:
-        # Declare analyzer exchange and queue
-        analyzer_exchange = await setup_channel.declare_exchange(
-            "analyzer_exchange", ExchangeType.DIRECT, durable=True
-        )
-        trace_queue = await setup_channel.declare_queue(
-            "trace_events", durable=True
-        )
-        await trace_queue.bind(analyzer_exchange, routing_key="trace")
+        # ========== NEW STREAMING ARCHITECTURE ==========
 
-        # Declare alert exchange and queues
+        # 1. Span intake exchange and queue (intake → dedup worker)
+        span_intake_exchange = await setup_channel.declare_exchange(
+            "span_intake_exchange", ExchangeType.DIRECT, durable=True
+        )
+        span_intake_queue = await setup_channel.declare_queue(
+            "span_intake", durable=True
+        )
+        await span_intake_queue.bind(span_intake_exchange, routing_key="span")
+        logger.info("✓ Created span_intake queue")
+
+        # 2. Span processing queue (dedup → analyzer worker)
+        span_processing_exchange = await setup_channel.declare_exchange(
+            "span_processing_exchange", ExchangeType.DIRECT, durable=True
+        )
+        span_processing_queue = await setup_channel.declare_queue(
+            "span_processing", durable=True
+        )
+        await span_processing_queue.bind(span_processing_exchange, routing_key="span")
+        logger.info("✓ Created span_processing queue")
+
+        # 3. WebSocket events exchange (analyzer → websocket service)
+        websocket_exchange = await setup_channel.declare_exchange(
+            "websocket_events",
+            ExchangeType.FANOUT,  # Broadcast to all websocket workers
+            durable=True
+        )
+        logger.info("✓ Created websocket_events exchange")
+
+        # 4. Alert exchange and queues (existing - keep for compatibility)
         alert_exchange = await setup_channel.declare_exchange(
             "alert_exchange",
             ExchangeType.FANOUT,
             durable=True
         )
-    
         await setup_channel.declare_queue("alerts", durable=True)
         await setup_channel.declare_queue("slack_msgs", durable=True)
+        logger.info("✓ Created alert queues")
+
+        logger.info("✓ All RabbitMQ queues initialized for streaming architecture")
     finally: 
         await setup_channel.close()
     

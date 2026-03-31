@@ -18,5 +18,9 @@ class Config:
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
     TRACE_TTL = int(os.getenv("TRACE_TTL", "3600"))
 
+    # Span size thresholds (in bytes)
+    # If COMBINED input_data + output_data exceed this, store in Redis
+    LARGE_FIELD_THRESHOLD = int(os.getenv("LARGE_FIELD_THRESHOLD", "10000"))  # 10KB
+
     # Future: Bloombox URL for advanced analysis
     BLOOMBOX_URL = os.getenv("BLOOMBOX_URL", "http://bloombox:8080")

@@ -9,11 +9,11 @@ log = logging.getLogger(__name__)
 
 class RedisClient:
     def __init__(self, url: str):
-        self.url=url
+        self.url = url
         self._client = None
-    
+
     async def get_client(self):
-        """Get or create new redis client"""
+        """Get or create Redis client"""
         if self._client is None:
             self._client = redis.from_url(
                 self.url,
@@ -22,43 +22,54 @@ class RedisClient:
             )
             log.info(f"Redis client connected to {self.url}")
         return self._client
-    
-    async def store_trace(self, trace_id: str, trace_content: str, ttl: int = 3600) -> bool:
-        """Store trace content with TTL(default 1 hour)"""
+
+    # ========== SPAN DATA STORAGE (for large fields) ==========
+
+    async def store_span_data(self, key: str, data: dict, ttl: int = 3600) -> bool:
+        """
+        Store large span fields (input_data/output_data) temporarily.
+        Used when span fields exceed size threshold to avoid bloating message queue.
+
+        Args:
+            key: Redis key (e.g., "span_data:{span_id}:input")
+            data: Dictionary to store
+            ttl: Time-to-live in seconds (default 1 hour)
+        """
         try:
             client = await self.get_client()
-            await client.setex(f"trace:{trace_id}", ttl, trace_content)
-            log.info(f"Stored trace {trace_id}")
+            await client.setex(key, ttl, json.dumps(data))
+            log.info(f"Stored span data: {key} ({len(json.dumps(data))} bytes)")
             return True
         except Exception as e:
-            log.error(f"Failed to store trace {trace_id}: {e}")
+            log.error(f"Failed to store span data {key}: {e}")
             return False
-    
-    async def store_rate(self, cache_key: str, scores: Dict[str, float], ttl: int = 6 * 60 * 60) -> bool:
-        """Store PR's language priorities scores"""
+
+    async def get_span_data(self, key: str) -> dict | None:
+        """
+        Retrieve large span fields stored in Redis.
+        Worker calls this to hydrate span data before processing.
+
+        Args:
+            key: Redis key (e.g., "span_data:{span_id}:input")
+
+        Returns:
+            Dictionary if found, None otherwise
+        """
         try:
             client = await self.get_client()
-            await client.setex(cache_key, ttl, json.dumps(scores))
-            return True
-        except Exception as e:
-            log.error(f"Failed to store language scores for {cache_key}: {e}")
-            return False
-        
-    async def get_score(self, cache_key: str) -> Dict[str, float] | None:
-        """Retrieve PR's language scores"""
-        try:
-            client = await self.get_client()
-            scores_json = await client.get(cache_key)
-            scores: Dict[str, float] = json.loads(scores_json)
-            if scores_json:
-                log.info(f"Retrieved language scores for {cache_key}")
+            data_json = await client.get(key)
+            if data_json:
+                log.debug(f"Retrieved span data: {key}")
+                return json.loads(data_json)
             else:
-                log.warning(f"Language scores for {cache_key} not found or expired")
-            return scores
+                log.warning(f"Span data not found or expired: {key}")
+                return None
         except Exception as e:
-            log.error(f"Failed to retrieve language scores for {cache_key}: {e}")
+            log.error(f"Failed to retrieve span data {key}: {e}")
             return None
-        
+
+    # ========== SERVICE HEARTBEAT & REGISTRATION ==========
+
     async def register_instance(self, service_name: str, instance_id: str) -> bool:
         """Register service instance in Redis set"""
         try:
@@ -69,6 +80,7 @@ class RedisClient:
         except Exception as e:
             log.error(f"Failed to register instance {instance_id} for {service_name}: {e}")
             return False
+
     async def deregister_instance(self, service_name: str, instance_id: str) -> bool:
         """Deregister service instance from Redis set"""
         try:
@@ -96,4 +108,3 @@ class RedisClient:
         if self._client:
             await self._client.close()
             log.info("Redis client closed")
-        

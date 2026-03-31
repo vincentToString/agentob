@@ -35,6 +35,31 @@ class RedisClient:
         except Exception as e:
             log.error(f"Failed to retrieve trace {trace_id}: {e}")
             return None
+        
+    async def get_span_data(self, key: str) -> dict | None:
+        """
+        Retrieve large span fields stored in Redis.
+        Worker calls this to hydrate span data before processing.
+
+        Args:
+            key: Redis key (e.g., "span_data:{span_id}:input")
+
+        Returns:
+            Dictionary if found, None otherwise
+        """
+        try:
+            client = await self.get_client()
+            data_json = await client.get(key)
+            if data_json:
+                log.debug(f"Retrieved span data: {key}")
+                return json.loads(data_json)
+            else:
+                log.warning(f"Span data not found or expired: {key}")
+                return None
+        except Exception as e:
+            log.error(f"Failed to retrieve span data {key}: {e}")
+            return None
+
     
     async def register_instance(self, service_name: str, instance_id: str) -> bool:
         """Register service instance in Redis set"""
