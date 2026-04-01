@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package bloom;
+
+option go_package = "github.com/yourusername/bloombox/api/proto";
+
+// BloomService provides bloom filter operations
+service BloomService {
+  rpc CreateFilter(CreateFilterRequest) returns (CreateFilterResponse);
+  rpc Add(AddRequest) returns (AddResponse);
+  rpc Check(CheckRequest) returns (CheckResponse);
+}
+
+message CreateFilterRequest {
+  string filter_type = 1;      // "standard" or "scalable"
+  uint64 expected_items = 2;   // Expected number of items
+  double false_pos_rate = 3;   // Target false positive rate (e.g., 0.01 for 1%)
+}
+
+message CreateFilterResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message AddRequest {
+  bytes data = 1;  // Data to add to filter
+}
+
+message AddResponse {
+  bool success = 1;
+}
+
+message CheckRequest {
+  bytes data = 1;  // Data to check in filter
+}
+
+message CheckResponse {
+  bool found = 1;  // true if probably in set, false if definitely not
+}

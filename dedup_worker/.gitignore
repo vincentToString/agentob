@@ -1,0 +1,34 @@
+# Generated gRPC stubs
+bloom_pb2.py
+bloom_pb2_grpc.py
+*_pb2.py
+*_pb2_grpc.py
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# UV
+.uv/
+uv.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

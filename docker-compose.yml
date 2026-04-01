@@ -70,6 +70,27 @@ services:
     volumes:
       - ./intake:/app/intake
 
+  dedup_worker:
+    build:
+      context: ./dedup_worker
+      dockerfile: Dockerfile
+    container_name: dedup_worker
+    environment:
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
+      - BLOOMBOX_GRPC_HOST=host.docker.internal
+      - BLOOMBOX_GRPC_PORT=50051
+      - BLOOMBOX_HTTP_URL=http://host.docker.internal:8080
+      - BLOOM_EXPECTED_ITEMS=1000000
+      - BLOOM_FALSE_POS_RATE=0.01
+      - DEDUP_PREFETCH_COUNT=100
+      - LOG_LEVEL=INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./dedup_worker:/app/dedup_worker
+
   ai_service:
     build:
       context: ./ai_service

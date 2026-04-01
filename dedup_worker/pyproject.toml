@@ -1,0 +1,12 @@
+[project]
+name = "dedup-worker"
+version = "0.1.0"
+description = "Deduplication worker using BloomBox for span filtering"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aio-pika>=9.5.7",
+    "grpcio>=1.62.1",
+    "grpcio-tools>=1.62.1",
+    "requests>=2.31.0",
+]
