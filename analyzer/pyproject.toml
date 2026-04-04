@@ -1,0 +1,13 @@
+[project]
+name = "analyzer"
+version = "0.1.0"
+description = "Analyzer worker for AgentOB - processes spans and detects anomalies"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aio-pika>=9.5.7",
+    "asyncpg>=0.29.0",
+    "redis>=7.0.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+]

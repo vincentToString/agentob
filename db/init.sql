@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS agent_baselines (
     
     -- Tracking
     sample_size INT DEFAULT 0,
-    last_updated TIMESTAMP DEFAULT NOW(),
-    created_at TIMESTAMP DEFAULT NOW(),
+    last_updated TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     
     UNIQUE(project_id, agent_name)
 );
@@ -61,9 +61,10 @@ CREATE TABLE IF NOT EXISTS agent_runs (
     span_tree JSONB,
     
     -- Timestamps
-    started_at TIMESTAMP NOT NULL,
-    completed_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW(),
+    started_at TIMESTAMPTZ NOT NULL,
+    last_span_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     
     -- Flexible metadata
     metadata JSONB DEFAULT '{}',
@@ -98,9 +99,10 @@ CREATE TABLE IF NOT EXISTS spans (
     tool_status VARCHAR(50),  -- 'success', 'error', 'timeout'
     
     -- Timing
-    started_at TIMESTAMP NOT NULL,
-    completed_at TIMESTAMP,
+    started_at TIMESTAMPTZ NOT NULL,
+    completed_at TIMESTAMPTZ,
     duration_ms INT,
+    is_final BOOLEAN DEFAULT FALSE,
     
     -- Tree structure
     sequence_index INT NOT NULL,
@@ -113,7 +115,7 @@ CREATE TABLE IF NOT EXISTS spans (
     
     -- Flexible metadata
     metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================
@@ -133,7 +135,7 @@ CREATE TABLE IF NOT EXISTS alerts (
     title VARCHAR(512) NOT NULL,
     description TEXT,
     
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -v http://localhost:8000/health)",
+      "Bash(tasklist)",
+      "Bash(findstr 146284)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

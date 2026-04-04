@@ -34,9 +34,8 @@ class SpanEvent(BaseModel):
     
     # Flexible metadata (future: prompt_hash, temperature, etc.)
     metadata: dict = Field(default_factory=dict, description="Additional custom metadata")
-
-
-     # ======== Added by worker after =============
+    
+    # ======== Added by worker after =============
     # Anomaly detection (set by analyzer worker)
     is_anomalous: bool = Field(False, description="True if anomaly detected in this span")
     anomaly_type: Optional[str] = Field(None, description="Type of anomaly: slow_retrieval, high_cost, tool_failure, etc.")

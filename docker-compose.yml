@@ -70,6 +70,31 @@ services:
     volumes:
       - ./intake:/app/intake
 
+  analyzer:
+    build:
+      context: ./analyzer
+      dockerfile: Dockerfile
+    container_name: analyzer
+    environment:
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=agentob_user
+      - POSTGRES_PASSWORD=agentob_password
+      - POSTGRES_DB=agentob_db
+      - LOG_LEVEL=INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./analyzer:/app/analyzer
+
   dedup_worker:
     build:
       context: ./dedup_worker

@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
             "span_intake", durable=True
         )
         await span_intake_queue.bind(span_intake_exchange, routing_key="span")
-        logger.info("✓ Created span_intake queue")
+        logger.info("[OK] Created span_intake queue")
 
         # 2. Span processing queue (dedup → analyzer worker)
         span_processing_exchange = await setup_channel.declare_exchange(
@@ -49,17 +49,27 @@ async def lifespan(app: FastAPI):
             "span_processing", durable=True
         )
         await span_processing_queue.bind(span_processing_exchange, routing_key="span")
-        logger.info("✓ Created span_processing queue")
+        logger.info("[OK] Created span_processing queue")
 
-        # 3. WebSocket events exchange (analyzer → websocket service)
+        # 3. LLM Summary Queue (analyzer worker -> llm summary)
+        llm_summary_exchange = await setup_channel.declare_exchange(
+            "llm_summary_exchange", ExchangeType.DIRECT, durable=True
+        )
+        llm_summary_queue = await setup_channel.declare_queue(
+            "llm_summary", durable=True
+        )
+        await llm_summary_queue.bind(llm_summary_exchange, routing_key="trace")
+        logger.info("[OK] Created span_processing queue")
+
+        # 4. WebSocket events exchange (analyzer → websocket service)
         websocket_exchange = await setup_channel.declare_exchange(
             "websocket_events",
             ExchangeType.FANOUT,  # Broadcast to all websocket workers
             durable=True
         )
-        logger.info("✓ Created websocket_events exchange")
+        logger.info("[OK] Created websocket_events exchange")
 
-        # 4. Alert exchange and queues (existing - keep for compatibility)
+        # 5. Alert exchange and queues (existing - keep for compatibility)
         alert_exchange = await setup_channel.declare_exchange(
             "alert_exchange",
             ExchangeType.FANOUT,
@@ -67,9 +77,9 @@ async def lifespan(app: FastAPI):
         )
         await setup_channel.declare_queue("alerts", durable=True)
         await setup_channel.declare_queue("slack_msgs", durable=True)
-        logger.info("✓ Created alert queues")
+        logger.info("[OK] Created alert queues")
 
-        logger.info("✓ All RabbitMQ queues initialized for streaming architecture")
+        logger.info("[OK] All RabbitMQ queues initialized for streaming architecture")
     finally: 
         await setup_channel.close()
     

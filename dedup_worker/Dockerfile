@@ -9,7 +9,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # Install dependencies
-COPY pyproject.toml ./
+COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen
 
 # Copy code into dedup_worker subfolder
