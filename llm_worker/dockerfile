@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+# Set environment variables
+ENV UV_PROJECT_ENVIRONMENT=/venv
+ENV PATH="/venv/bin:$PATH"
+ENV PYTHONPATH=/app
+
+WORKDIR /app
+
+# Install uv
+RUN pip install --no-cache-dir uv
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies
+RUN uv sync --frozen
+
+# Copy application code
+COPY . ./llm_worker/
+
+# Run the worker
+CMD ["python", "-m", "llm_worker.main"]

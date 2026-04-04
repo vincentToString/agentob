@@ -9,7 +9,7 @@ import signal
 import httpx
 from ai_service.models import AnalysisResult
 from ai_service.config import Config
-from ai_service.redis_client import RedisClient
+from llm_worker.utils.redis_client import RedisClient
 from ai_service.trace_analyzer import (
     build_span_tree,
     detect_anomalies,
@@ -21,7 +21,7 @@ from ai_service.db_operations import (
     update_baseline,
     store_trace_to_db,
 )
-from .heartbeat import WorkerHealthState, heartbeat_loop
+from ..llm_worker.utils.heartbeat import WorkerHealthState, heartbeat_loop
 import socket
 
 logging.basicConfig(

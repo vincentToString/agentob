@@ -116,11 +116,11 @@ services:
     volumes:
       - ./dedup_worker:/app/dedup_worker
 
-  ai_service:
+  llm_worker:
     build:
-      context: ./ai_service
+      context: ./llm_worker
       dockerfile: Dockerfile
-    container_name: ai_service
+    container_name: llm_worker
     environment:
       - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
       - REDIS_URL=redis://redis:6379
@@ -130,23 +130,20 @@ services:
       - POSTGRES_PASSWORD=agentob_password
       - POSTGRES_DB=agentob_db
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - OPENROUTER_BASE=${OPENROUTER_BASE:-https://openrouter.ai/api/v1}
-      - MODEL=${MODEL:-openai/gpt-4o-mini}
-      - LLM_TIMEOUT=${LLM_TIMEOUT:-20}
-      - RAG_SERVICE_URL=http://rag_service:8002
-      - RAG_ENABLED=${RAG_ENABLED:-true}
-      - RAG_TOP_K=${RAG_TOP_K:-3}
-      - RAG_TIMEOUT=${RAG_TIMEOUT:-5}
+      - OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+      - LLM_MODEL=openai/gpt-4o-mini
+      - LLM_MAX_TOKENS=500
+      - LLM_TEMPERATURE=0.3
+      - LLM_TIMEOUT=30
+      - LOG_LEVEL=INFO
     depends_on:
       rabbitmq:
         condition: service_healthy
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ./ai_service:/app/ai_service
+      - ./llm_worker:/app/llm_worker
 
   outbound:
     build:

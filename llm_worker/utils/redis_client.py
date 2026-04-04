@@ -22,44 +22,6 @@ class RedisClient:
             log.info(f"Redis client connected to {self.url}")
         return self._client
     
-    async def get_trace(self, trace_id: str) -> Optional[Dict]:
-        """Retrieve trace content"""
-        try:
-            client = await self.get_client()
-            trace_content = await client.get(f"trace:{trace_id}")
-            if trace_content:
-                log.info(f"Retrieved trace {trace_id}")
-            else:
-                log.warning(f"Trace {trace_id} not found or expired")
-            return json.loads(trace_content)
-        except Exception as e:
-            log.error(f"Failed to retrieve trace {trace_id}: {e}")
-            return None
-        
-    async def get_span_data(self, key: str) -> dict | None:
-        """
-        Retrieve large span fields stored in Redis.
-        Worker calls this to hydrate span data before processing.
-
-        Args:
-            key: Redis key (e.g., "span_data:{span_id}:input")
-
-        Returns:
-            Dictionary if found, None otherwise
-        """
-        try:
-            client = await self.get_client()
-            data_json = await client.get(key)
-            if data_json:
-                log.debug(f"Retrieved span data: {key}")
-                return json.loads(data_json)
-            else:
-                log.warning(f"Span data not found or expired: {key}")
-                return None
-        except Exception as e:
-            log.error(f"Failed to retrieve span data {key}: {e}")
-            return None
-
     
     async def register_instance(self, service_name: str, instance_id: str) -> bool:
         """Register service instance in Redis set"""
