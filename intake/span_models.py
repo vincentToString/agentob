@@ -46,3 +46,4 @@ class SpanEvent(BaseModel):
     depth: int = Field(0, description="Depth in span tree (0=root)")
 
     # potential flag _redis_ref added after receival to indicate input/output data were stored in redis
+    # Potential flag io_data_excluded after analyzer to omit large input/output data

@@ -37,3 +37,6 @@ class Config:
     RAG_ENABLED = os.getenv("RAG_ENABLED", "true").lower() == "true"
     RAG_TOP_K = int(os.getenv("RAG_TOP_K", "3"))
     RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "5"))
+
+    # WebSocket settings
+    WEBSOCKET_DATA_THRESHOLD = int(os.getenv("WEBSOCKET_DATA_THRESHOLD", "10000"))  # 10KB default

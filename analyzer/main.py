@@ -35,6 +35,56 @@ logger = logging.getLogger(__name__)
 
 redis_client = RedisClient(Config.REDIS_URL)
 
+# ========== WEBSOCKET DATA PREPARATION ==========
+def prepare_websocket_span(span: dict, threshold: int = 10000) -> dict:
+    """
+    Conditionally strip large I/O data fields for WebSocket publishing.
+
+    Strategy: Check COMBINED size of input_data + output_data.
+    If total > threshold, exclude BOTH (they're semantically paired).
+
+    Args:
+        span: Full span dict with all fields
+        threshold: Size threshold in bytes (default 10KB)
+
+    Returns:
+        Span dict with I/O data conditionally excluded:
+        - If (input + output) > threshold: exclude both + add metadata
+        - Otherwise: keep both as-is
+
+    Added fields when excluded:
+        - io_data_excluded: bool (True if both stripped)
+        - io_data_size: int (combined size in bytes)
+    """
+    result = span.copy()
+
+    # Calculate combined size of input_data + output_data
+    input_size = 0
+    output_size = 0
+
+    if span.get("input_data") is not None:
+        input_json = json.dumps(span["input_data"])
+        input_size = len(input_json.encode('utf-8'))
+
+    if span.get("output_data") is not None:
+        output_json = json.dumps(span["output_data"])
+        output_size = len(output_json.encode('utf-8'))
+
+    combined_size = input_size + output_size
+
+    # If combined size exceeds threshold, exclude BOTH
+    if combined_size > threshold:
+        result["input_data"] = None
+        result["output_data"] = None
+        result["io_data_excluded"] = True
+        result["io_data_size"] = combined_size
+        logger.debug(
+            f"Excluded I/O data ({combined_size} bytes: input={input_size}, output={output_size}) "
+            f"for span {span.get('span_id')}"
+        )
+
+    return result
+
 # ========== WEBSOCKET PUBLISHER (for real-time dashboard updates) ==========
 async def publish_to_websocket(channel, event: dict):
     """
@@ -133,11 +183,13 @@ async def finalize_run(run_id: str, channel):
                     span_count=len(spans)
                 )
 
-        # 6. Publish WebSocket event
+        # 6. Publish WebSocket event (with conditional I/O stripping)
+        stripped_tree = [prepare_websocket_span(s, threshold=Config.WEBSOCKET_DATA_THRESHOLD) for s in spans]
+
         await publish_to_websocket(channel, {
             "type": "run_completed",
             "run_id": run_id,
-            "span_tree": span_tree,
+            "span_tree": stripped_tree,
             "metrics": {
                 "total_spans": len(spans),
                 "total_cost": float(total_cost),
@@ -300,7 +352,7 @@ async def handle_message(message: AbstractIncomingMessage, channel):
         await publish_to_websocket(channel, {
             "type": "span_received",
             "run_id": run_id,
-            "span": span_event
+            "span": prepare_websocket_span(span_event, threshold=Config.WEBSOCKET_DATA_THRESHOLD)
         })
         
         # ========== FINALIZATION CHECK ==========
